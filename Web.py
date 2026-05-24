@@ -106,7 +106,7 @@ for feature in feature_label:
         format="%.9f"
     )
 
-st.sidebar.markdown("### Clinical / Morphological Features")
+st.sidebar.markdown("### Clinical/Radiological Features")
 
 ima_options = ["No", "Yes"]
 
@@ -230,9 +230,6 @@ if st.sidebar.button("Predict"):
         )
 
         st.markdown("## SHAP Force Plot")
-
-        st.markdown("## SHAP Force Plot")
-
         shap_img = create_shap_force_plot(explainer, input_df)
         
         st.image(
