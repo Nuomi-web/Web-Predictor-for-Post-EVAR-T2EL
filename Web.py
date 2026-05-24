@@ -264,7 +264,7 @@ if st.sidebar.button("Predict"):
             input_df.iloc[0, :], 
             feature_names=feature_label, 
             matplotlib=True, 
-            contribution_threshold=0.1
+            contribution_threshold=0.01
         )
         plt.savefig("shap_force_plot.png", bbox_inches='tight', dpi=120)
         plt.close()
