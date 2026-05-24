@@ -6,119 +6,264 @@ import shap
 import xgboost as xgb
 import matplotlib.pyplot as plt
 
-# 1. Load model
-model_xgb = joblib.load('XGBoost.pkl')
-
-# 2. Configure SHAP explainer
-feature_label = [
-    'IC_DL_4', 
-    'Zeff_wavelet-LLL_glszm_LongRunLowGrayLevelEmphasis', 
-    'Zeff_DL_19', 
-    'VMI_wavelet-HLL_gldm_DependenceVariance', 
-    'VMI_DL_248', 
-    'IC_DL_28', 
-    'IC_wavelet-LHL_glcm_ClusterShade', 
-    'PEI_DL_132', 
-    'VMI_wavelet-LHL_firstorder_Skewness',  
-    'Zeff_wavelet-HLL_glszm_ZoneEntropy', 
-    'IC_DL_167', 
-    'VMI_DL_176', 
-    'VMI_DL_91', 
-    'IC_DL_235', 
-    'IC_wavelet-HHH_glszm_GrayLevelNonUniformityNormalized', 
-    'Differentiation', 
-    'CT-T stage'
-]
-
-# Default values for continuous features and categorical (last two are categorical)
-default_values = [
-    0.95656610, 1.77532916, 3.24643647, -0.06170008, 0.62616521,
-    2.34962238, 1.72969082, 1.46654855, 1.65198977, 0.68470378,
-    3.45412184, 1.92712107, 12.20979126, 7.41223900, 4.89298639,
-    'Poor',  # Differentiation default
-    'T4'     # CT-T stage default
-]
-
-# 3. Streamlit input
-st.title('Web Predictor for GR to nCRT in Patients with LARC')
-st.sidebar.header('Input Features')
-
-# Input feature form
-inputs = {}
-for i, feature in enumerate(feature_label):
-    default_val = default_values[i]
-    if feature == 'Differentiation':
-        # Categorical: Well/Moderate or Poor, set default accordingly
-        options = ['Well/Moderate', 'Poor']
-        default_index = options.index(default_val) if default_val in options else 0
-        inputs[feature] = st.sidebar.radio(
-            feature, 
-            options=options, 
-            index=default_index
-        )
-    elif feature == 'CT-T stage':
-        # Categorical: T3 or T4, set default accordingly
-        options = ['T3', 'T4']
-        default_index = options.index(default_val) if default_val in options else 0
-        inputs[feature] = st.sidebar.radio(
-            feature,
-            options=options,
-            index=default_index
-        )
-    else:
-        inputs[feature] = st.sidebar.number_input(
-            feature, 
-            min_value=-10.0, 
-            max_value=20.0,  # Increased max for safety since 12.2 appears
-            value=round(float(default_val),8), 
-            format="%.8f"  # Show 8 decimals
-        )
-
-# Map categorical variables to numerical values
-diff_map = {'Well/Moderate': 0, 'Poor': 1}
-ctt_map = {'T3': 0, 'T4': 1}
-
-inputs['Differentiation'] = diff_map[inputs['Differentiation']]
-inputs['CT-T stage'] = ctt_map[inputs['CT-T stage']]
-
-# Convert input values into a Pandas DataFrame
-input_df = pd.DataFrame([inputs])
-
-# 4. Prediction button
-if st.sidebar.button('Predict'):
-    try:
-        # Ensure correct input data
-        input_data = xgb.DMatrix(input_df)  # Pass DataFrame format data directly without .values
-        prediction = model_xgb.predict(input_data)[0]  # Make prediction
-
-        # Display prediction result
-        st.subheader('Predicted probability of GR to nCRT')
-        st.markdown(
-    f'<span style="color:red; font-size:30px;">Predicted probability: {prediction:.8f}</span>',
-    unsafe_allow_html=True
+# ===============================
+# 1. Page configuration
+# ===============================
+st.set_page_config(
+    page_title="Web Predictor",
+    page_icon="🩺",
+    layout="wide"
 )
 
+st.title("Web Predictor")
+st.markdown("### XGBoost-based prediction model with SHAP explanation")
 
+# ===============================
+# 2. Feature names
+# ===============================
+feature_label = [
+    "DeepFeature7",
+    "DeepFeature474",
+    "DeepFeature105",
+    "DeepFeature375",
+    "DeepFeature48",
+    "DeepFeature318",
+    "DeepFeature332",
+    "AAA_wavelet-HL_firstorder_Skewness",
+    "DeepFeature316",
+    "DeepFeature73",
+    "PVAT_wavelet-HL_firstorder_Maximum",
+    "PVAT_wavelet-LL_glcm_ClusterShade",
+    "AAA_square_gldm_DependenceNonUniformityNormalized",
+    "AAA_square_glcm_Imc1",
+    "IMA patency",
+    "Maximum aneurysm diameter (mm)"
+]
 
-        # Compute SHAP values
-        explainer = shap.TreeExplainer(model_xgb)
+# ===============================
+# 3. Default sample values
+# IMA patency: No = 0, Yes = 1
+# ===============================
+default_values = {
+    "DeepFeature7": -0.194331593,
+    "DeepFeature474": 0.567902798,
+    "DeepFeature105": 0.837165944,
+    "DeepFeature375": -0.640949675,
+    "DeepFeature48": -0.321764867,
+    "DeepFeature318": 0.6806,
+    "DeepFeature332": 0.76790509,
+    "AAA_wavelet-HL_firstorder_Skewness": -1.511827266,
+    "DeepFeature316": -1.518833969,
+    "DeepFeature73": -0.606873453,
+    "PVAT_wavelet-HL_firstorder_Maximum": 1.813605379,
+    "PVAT_wavelet-LL_glcm_ClusterShade": 0.064459839,
+    "AAA_square_gldm_DependenceNonUniformityNormalized": -0.771297444,
+    "AAA_square_glcm_Imc1": 10.20636933,
+    "IMA patency": "Yes",
+    "Maximum aneurysm diameter (mm)": 48.06
+}
+
+# ===============================
+# 4. Load model
+# ===============================
+@st.cache_resource
+def load_model():
+    return joblib.load("XGBoost.pkl")
+
+model_xgb = load_model()
+
+# ===============================
+# 5. Load SHAP explainer
+# ===============================
+@st.cache_resource
+def load_explainer(_model):
+    return shap.TreeExplainer(_model)
+
+explainer = load_explainer(model_xgb)
+
+# ===============================
+# 6. Sidebar input
+# ===============================
+st.sidebar.header("Input Features")
+
+inputs = {}
+
+st.sidebar.markdown("### Radiomics / Deep Features")
+
+for feature in feature_label:
+    if feature in ["IMA patency", "Maximum aneurysm diameter (mm)"]:
+        continue
+
+    inputs[feature] = st.sidebar.number_input(
+        label=feature,
+        min_value=-1000.0,
+        max_value=1000.0,
+        value=float(default_values[feature]),
+        step=0.01,
+        format="%.9f"
+    )
+
+st.sidebar.markdown("### Clinical / Morphological Features")
+
+# IMA patency: No=0, Yes=1
+ima_options = ["No", "Yes"]
+
+inputs["IMA patency"] = st.sidebar.radio(
+    "IMA patency",
+    options=ima_options,
+    index=ima_options.index(default_values["IMA patency"]),
+    help="No = 0, Yes = 1"
+)
+
+inputs["Maximum aneurysm diameter (mm)"] = st.sidebar.number_input(
+    "Maximum aneurysm diameter (mm)",
+    min_value=0.0,
+    max_value=200.0,
+    value=float(default_values["Maximum aneurysm diameter (mm)"]),
+    step=0.01,
+    format="%.2f"
+)
+
+# ===============================
+# 7. Encode categorical variable
+# ===============================
+ima_map = {
+    "No": 0,
+    "Yes": 1
+}
+
+inputs["IMA patency"] = ima_map[inputs["IMA patency"]]
+
+# ===============================
+# 8. Convert to DataFrame and keep feature order
+# ===============================
+input_df = pd.DataFrame([inputs])
+input_df = input_df[feature_label]
+
+st.subheader("Input data for model")
+st.dataframe(input_df, use_container_width=True)
+
+# ===============================
+# 9. Prediction function
+# ===============================
+def predict_model(model, input_df):
+    """
+    Compatible with:
+    - xgboost.Booster
+    - sklearn API XGBClassifier/XGBRegressor
+    """
+
+    if isinstance(model, xgb.Booster):
+        dmatrix = xgb.DMatrix(input_df)
+        pred = model.predict(dmatrix)
+    else:
+        if hasattr(model, "predict_proba"):
+            pred = model.predict_proba(input_df)
+
+            if pred.ndim == 2 and pred.shape[1] == 2:
+                pred = pred[:, 1]
+        else:
+            pred = model.predict(input_df)
+
+    return pred
+
+# ===============================
+# 10. SHAP plotting function
+# ===============================
+def plot_shap_force(explainer, shap_values, input_df):
+    expected_value = explainer.expected_value
+
+    if isinstance(expected_value, list):
+        expected_value = expected_value[-1]
+
+    if isinstance(expected_value, np.ndarray):
+        if expected_value.ndim > 0:
+            expected_value = expected_value[-1]
+
+    if isinstance(shap_values, list):
+        shap_value_single = shap_values[-1][0]
+    else:
+        shap_value_single = shap_values[0]
+
+    shap.force_plot(
+        expected_value,
+        shap_value_single,
+        input_df.iloc[0, :],
+        feature_names=feature_label,
+        matplotlib=True,
+        show=False,
+        contribution_threshold=0.05
+    )
+
+    fig = plt.gcf()
+    return fig
+
+# ===============================
+# 11. Prediction and SHAP
+# ===============================
+if st.sidebar.button("Predict"):
+    try:
+        prediction = predict_model(model_xgb, input_df)
+
+        st.subheader("Prediction Result")
+
+        if np.asarray(prediction).ndim == 1:
+            pred_value = float(np.asarray(prediction)[0])
+
+            st.markdown(
+                f"""
+                <div style="
+                    background-color:#fff3f3;
+                    padding:20px;
+                    border-radius:10px;
+                    border:1px solid #ffcccc;
+                ">
+                    <span style="color:red; font-size:30px;">
+                        Predicted probability: {pred_value:.8f}
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            if pred_value >= 0.5:
+                st.warning("Predicted class: Positive")
+            else:
+                st.success("Predicted class: Negative")
+
+        else:
+            pred_array = np.asarray(prediction)[0]
+            pred_class = int(np.argmax(pred_array))
+
+            result_df = pd.DataFrame({
+                "Class": [f"Class {i}" for i in range(len(pred_array))],
+                "Probability": pred_array
+            })
+
+            st.dataframe(result_df, use_container_width=True)
+
+            st.markdown(
+                f"""
+                <span style="color:red; font-size:30px;">
+                    Predicted class: {pred_class}
+                </span>
+                """,
+                unsafe_allow_html=True
+            )
+
+        # SHAP explanation
+        st.subheader("SHAP Force Plot")
+
         shap_values = explainer.shap_values(input_df)
 
-        # 5. Display SHAP force plot
-        st.subheader('SHAP Force Plot')
-        shap.initjs()
-        force_plot = shap.force_plot(
-            explainer.expected_value, 
-            shap_values[0], 
-            input_df.iloc[0, :], 
-            feature_names=feature_label, 
-            matplotlib=True, 
-            contribution_threshold=0.1
+        fig = plot_shap_force(
+            explainer=explainer,
+            shap_values=shap_values,
+            input_df=input_df
         )
-        plt.savefig("shap_force_plot.png", bbox_inches='tight', dpi=120)
-        plt.close()
 
-        st.image("shap_force_plot.png")
+        st.pyplot(fig)
+        plt.close(fig)
 
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
