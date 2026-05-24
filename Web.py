@@ -251,7 +251,11 @@ if st.sidebar.button("Predict"):
                 unsafe_allow_html=True
             )
 
-        # SHAP explanation
+       # Compute SHAP values
+        explainer = shap.TreeExplainer(model_xgb)
+        shap_values = explainer.shap_values(input_df)
+
+        # 5. Display SHAP force plot
         st.subheader('SHAP Force Plot')
         shap.initjs()
         force_plot = shap.force_plot(
@@ -266,3 +270,6 @@ if st.sidebar.button("Predict"):
         plt.close()
 
         st.image("shap_force_plot.png")
+
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
