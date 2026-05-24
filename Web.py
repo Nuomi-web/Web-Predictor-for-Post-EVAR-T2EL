@@ -17,72 +17,9 @@ st.set_page_config(
 )
 
 # ===============================
-# 2. Custom CSS
+# 2. Page title
 # ===============================
-st.markdown(
-    """
-    <style>
-    .main {
-        background-color: #0e1117;
-    }
-
-    .block-container {
-        padding-top: 6rem;
-        padding-left: 6rem;
-        padding-right: 6rem;
-        max-width: 1500px;
-    }
-
-    h1 {
-        color: white;
-        font-size: 64px !important;
-        font-weight: 800 !important;
-        margin-bottom: 50px !important;
-    }
-
-    h2 {
-        color: white;
-        font-size: 42px !important;
-        font-weight: 700 !important;
-        margin-top: 30px !important;
-        margin-bottom: 30px !important;
-    }
-
-    h3 {
-        color: white;
-        font-size: 34px !important;
-        font-weight: 700 !important;
-        margin-top: 40px !important;
-        margin-bottom: 25px !important;
-       .pred-value {
-        color: white;
-        font-size: 26px;
-        font-weight: 600;
-        margin-bottom: 60px;
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #262730;
-    }
-
-    [data-testid="stSidebar"] label {
-        color: white !important;
-        font-size: 20px !important;
-        font-weight: 600 !important;
-    }
-
-    [data-testid="stSidebar"] input {
-        font-size: 22px !important;
-    }
-
-    .stRadio label {
-        color: white !important;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+st.title("Web Predictor for Post-EVAR T2EL")
 
 # ===============================
 # 3. Feature names
@@ -108,6 +45,7 @@ feature_label = [
 
 # ===============================
 # 4. Default sample values
+# IMA patency: No = 0, Yes = 1
 # ===============================
 default_values = {
     "DeepFeature7": -0.194331593,
@@ -153,6 +91,8 @@ st.sidebar.header("Input Features")
 
 inputs = {}
 
+st.sidebar.markdown("### Radiomics / Deep Features")
+
 for feature in feature_label:
     if feature in ["IMA patency", "Maximum aneurysm diameter (mm)"]:
         continue
@@ -166,14 +106,15 @@ for feature in feature_label:
         format="%.9f"
     )
 
-st.sidebar.markdown("---")
+st.sidebar.markdown("### Clinical / Morphological Features")
 
 ima_options = ["No", "Yes"]
 
 inputs["IMA patency"] = st.sidebar.radio(
     "IMA patency",
     options=ima_options,
-    index=ima_options.index(default_values["IMA patency"])
+    index=ima_options.index(default_values["IMA patency"]),
+    help="No = 0, Yes = 1"
 )
 
 inputs["Maximum aneurysm diameter (mm)"] = st.sidebar.number_input(
@@ -188,18 +129,12 @@ inputs["Maximum aneurysm diameter (mm)"] = st.sidebar.number_input(
 # ===============================
 # 8. Encode categorical variable
 # ===============================
-ima_map = {
-    "No": 0,
-    "Yes": 1
-}
-
-inputs["IMA patency"] = ima_map[inputs["IMA patency"]]
+inputs["IMA patency"] = 1 if inputs["IMA patency"] == "Yes" else 0
 
 # ===============================
-# 9. Convert to DataFrame
+# 9. Convert to DataFrame and keep feature order
 # ===============================
-input_df = pd.DataFrame([inputs])
-input_df = input_df[feature_label]
+input_df = pd.DataFrame([inputs])[feature_label]
 
 # ===============================
 # 10. Prediction function
@@ -223,16 +158,16 @@ def predict_model(model, input_df):
         else:
             pred = model.predict(input_df)
 
-    return pred
+    return np.asarray(pred).ravel()
 
 # ===============================
-# 11. SHAP helper
+# 11. SHAP functions
 # ===============================
-def get_shap_values_for_plot(explainer, input_df):
+def get_single_shap_values(explainer, input_df):
     shap_values = explainer.shap_values(input_df)
     expected_value = explainer.expected_value
 
-    # Binary / multiclass compatibility
+    # Handle binary / multiclass SHAP values
     if isinstance(shap_values, list):
         shap_value_single = shap_values[-1][0]
     else:
@@ -241,17 +176,14 @@ def get_shap_values_for_plot(explainer, input_df):
     if isinstance(expected_value, list):
         expected_value_single = expected_value[-1]
     elif isinstance(expected_value, np.ndarray):
-        if expected_value.ndim > 0:
-            expected_value_single = expected_value[-1]
-        else:
-            expected_value_single = expected_value
+        expected_value_single = expected_value.ravel()[-1]
     else:
         expected_value_single = expected_value
 
     return expected_value_single, shap_value_single
 
-def make_shap_force_plot(explainer, input_df):
-    expected_value, shap_value_single = get_shap_values_for_plot(
+def create_shap_force_plot(explainer, input_df):
+    expected_value, shap_value_single = get_single_shap_values(
         explainer,
         input_df
     )
@@ -274,48 +206,37 @@ def make_shap_force_plot(explainer, input_df):
     return buf
 
 # ===============================
-# 12. Main simplified output
+# 12. Prediction and SHAP output
 # ===============================
-try:
-    prediction = predict_model(model_xgb, input_df)
-    pred_value = float(np.asarray(prediction).ravel()[0])
+if st.sidebar.button("Predict"):
+    try:
+        prediction = predict_model(model_xgb, input_df)
+        pred_value = float(prediction[0])
 
-    st.markdown(
-        """
-        <h1>Web Predictor for Post-EVAR T2EL</h1>
-        """,
-        unsafe_allow_html=True
-    )
+        st.markdown("## Predicted Possibility of Post-EVAR T2EL")
 
-    st.markdown(
-        """
-        <h2>Predicted Possibility of Post-EVAR T2EL</h2>
-        """,
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            f"""
+            <div style="
+                font-size:28px;
+                font-weight:600;
+                margin-top:20px;
+                margin-bottom:50px;
+            ">
+                Predicted Value: {pred_value:.8f}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    st.markdown(
-        f"""
-        <div class="pred-value">
-            Predicted Value: {pred_value:.16f}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        st.markdown("## SHAP Force Plot")
 
-    st.markdown(
-        """
-        <h2>SHAP Force Plot</h2>
-        """,
-        unsafe_allow_html=True
-    )
+        shap_img = create_shap_force_plot(explainer, input_df)
 
-    shap_img = make_shap_force_plot(explainer, input_df)
+        st.image(
+            shap_img,
+            use_container_width=True
+        )
 
-    st.image(
-        shap_img,
-        use_container_width=True
-    )
-
-except Exception as e:
-    st.error(f"An error occurred: {str(e)}")
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
