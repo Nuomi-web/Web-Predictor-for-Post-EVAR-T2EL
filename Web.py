@@ -5,6 +5,7 @@ import numpy as np
 import shap
 import xgboost as xgb
 import matplotlib.pyplot as plt
+from io import BytesIO
 
 # ===============================
 # 1. Page configuration
@@ -15,11 +16,76 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Web Predictor")
-st.markdown("### Web Predictor for Post-EVAR T2EL")
+# ===============================
+# 2. Custom CSS
+# ===============================
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #0e1117;
+    }
+
+    .block-container {
+        padding-top: 6rem;
+        padding-left: 6rem;
+        padding-right: 6rem;
+        max-width: 1500px;
+    }
+
+    h1 {
+        color: white;
+        font-size: 64px !important;
+        font-weight: 800 !important;
+        margin-bottom: 50px !important;
+    }
+
+    h2 {
+        color: white;
+        font-size: 42px !important;
+        font-weight: 700 !important;
+        margin-top: 30px !important;
+        margin-bottom: 30px !important;
+    }
+
+    h3 {
+        color: white;
+        font-size: 34px !important;
+        font-weight: 700 !important;
+        margin-top: 40px !important;
+        margin-bottom: 25px !important;
+       .pred-value {
+        color: white;
+        font-size: 26px;
+        font-weight: 600;
+        margin-bottom: 60px;
+    }
+
+    [data-testid="stSidebar"] {
+        background-color: #262730;
+    }
+
+    [data-testid="stSidebar"] label {
+        color: white !important;
+        font-size: 20px !important;
+        font-weight: 600 !important;
+    }
+
+    [data-testid="stSidebar"] input {
+        font-size: 22px !important;
+    }
+
+    .stRadio label {
+        color: white !important;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # ===============================
-# 2. Feature names
+# 3. Feature names
 # ===============================
 feature_label = [
     "DeepFeature7",
@@ -41,8 +107,7 @@ feature_label = [
 ]
 
 # ===============================
-# 3. Default sample values
-# IMA patency: No = 0, Yes = 1
+# 4. Default sample values
 # ===============================
 default_values = {
     "DeepFeature7": -0.194331593,
@@ -64,7 +129,7 @@ default_values = {
 }
 
 # ===============================
-# 4. Load model
+# 5. Load model
 # ===============================
 @st.cache_resource
 def load_model():
@@ -73,7 +138,7 @@ def load_model():
 model_xgb = load_model()
 
 # ===============================
-# 5. Load SHAP explainer
+# 6. Load SHAP explainer
 # ===============================
 @st.cache_resource
 def load_explainer(_model):
@@ -82,13 +147,11 @@ def load_explainer(_model):
 explainer = load_explainer(model_xgb)
 
 # ===============================
-# 6. Sidebar input
+# 7. Sidebar input
 # ===============================
 st.sidebar.header("Input Features")
 
 inputs = {}
-
-st.sidebar.markdown("### Radiomics / Deep Features")
 
 for feature in feature_label:
     if feature in ["IMA patency", "Maximum aneurysm diameter (mm)"]:
@@ -103,16 +166,14 @@ for feature in feature_label:
         format="%.9f"
     )
 
-st.sidebar.markdown("### Clinical / Morphological Features")
+st.sidebar.markdown("---")
 
-# IMA patency: No=0, Yes=1
 ima_options = ["No", "Yes"]
 
 inputs["IMA patency"] = st.sidebar.radio(
     "IMA patency",
     options=ima_options,
-    index=ima_options.index(default_values["IMA patency"]),
-    help="No = 0, Yes = 1"
+    index=ima_options.index(default_values["IMA patency"])
 )
 
 inputs["Maximum aneurysm diameter (mm)"] = st.sidebar.number_input(
@@ -125,7 +186,7 @@ inputs["Maximum aneurysm diameter (mm)"] = st.sidebar.number_input(
 )
 
 # ===============================
-# 7. Encode categorical variable
+# 8. Encode categorical variable
 # ===============================
 ima_map = {
     "No": 0,
@@ -135,16 +196,13 @@ ima_map = {
 inputs["IMA patency"] = ima_map[inputs["IMA patency"]]
 
 # ===============================
-# 8. Convert to DataFrame and keep feature order
+# 9. Convert to DataFrame
 # ===============================
 input_df = pd.DataFrame([inputs])
 input_df = input_df[feature_label]
 
-st.subheader("Input data for model")
-st.dataframe(input_df, use_container_width=True)
-
 # ===============================
-# 9. Prediction function
+# 10. Prediction function
 # ===============================
 def predict_model(model, input_df):
     """
@@ -168,22 +226,35 @@ def predict_model(model, input_df):
     return pred
 
 # ===============================
-# 10. SHAP plotting function
+# 11. SHAP helper
 # ===============================
-def plot_shap_force(explainer, shap_values, input_df):
+def get_shap_values_for_plot(explainer, input_df):
+    shap_values = explainer.shap_values(input_df)
     expected_value = explainer.expected_value
 
-    if isinstance(expected_value, list):
-        expected_value = expected_value[-1]
-
-    if isinstance(expected_value, np.ndarray):
-        if expected_value.ndim > 0:
-            expected_value = expected_value[-1]
-
+    # Binary / multiclass compatibility
     if isinstance(shap_values, list):
         shap_value_single = shap_values[-1][0]
     else:
         shap_value_single = shap_values[0]
+
+    if isinstance(expected_value, list):
+        expected_value_single = expected_value[-1]
+    elif isinstance(expected_value, np.ndarray):
+        if expected_value.ndim > 0:
+            expected_value_single = expected_value[-1]
+        else:
+            expected_value_single = expected_value
+    else:
+        expected_value_single = expected_value
+
+    return expected_value_single, shap_value_single
+
+def make_shap_force_plot(explainer, input_df):
+    expected_value, shap_value_single = get_shap_values_for_plot(
+        explainer,
+        input_df
+    )
 
     shap.force_plot(
         expected_value,
@@ -192,84 +263,59 @@ def plot_shap_force(explainer, shap_values, input_df):
         feature_names=feature_label,
         matplotlib=True,
         show=False,
-        contribution_threshold=0.05
+        contribution_threshold=0.135
     )
 
-    fig = plt.gcf()
-    return fig
+    buf = BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight", dpi=150)
+    plt.close()
+    buf.seek(0)
+
+    return buf
 
 # ===============================
-# 11. Prediction and SHAP
+# 12. Main simplified output
 # ===============================
-if st.sidebar.button("Predict"):
-    try:
-        prediction = predict_model(model_xgb, input_df)
+try:
+    prediction = predict_model(model_xgb, input_df)
+    pred_value = float(np.asarray(prediction).ravel()[0])
 
-        st.subheader("Prediction Result")
+    st.markdown(
+        """
+        <h1>Web Predictor for Post-EVAR T2EL</h1>
+        """,
+        unsafe_allow_html=True
+    )
 
-        if np.asarray(prediction).ndim == 1:
-            pred_value = float(np.asarray(prediction)[0])
+    st.markdown(
+        """
+        <h2>Predicted Possibility of Post-EVAR T2EL</h2>
+        """,
+        unsafe_allow_html=True
+    )
 
-            st.markdown(
-                f"""
-                <div style="
-                    background-color:#fff3f3;
-                    padding:20px;
-                    border-radius:10px;
-                    border:1px solid #ffcccc;
-                ">
-                    <span style="color:red; font-size:30px;">
-                        Predicted Possibility of Post-EVAR T2EL；Predicted Value:  {pred_value:.8f}
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+    st.markdown(
+        f"""
+        <div class="pred-value">
+            Predicted Value: {pred_value:.16f}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-            if pred_value >= 0.5:
-                st.warning("Predicted class: Positive")
-            else:
-                st.success("Predicted class: Negative")
+    st.markdown(
+        """
+        <h2>SHAP Force Plot</h2>
+        """,
+        unsafe_allow_html=True
+    )
 
-        else:
-            pred_array = np.asarray(prediction)[0]
-            pred_class = int(np.argmax(pred_array))
+    shap_img = make_shap_force_plot(explainer, input_df)
 
-            result_df = pd.DataFrame({
-                "Class": [f"Class {i}" for i in range(len(pred_array))],
-                "Probability": pred_array
-            })
+    st.image(
+        shap_img,
+        use_container_width=True
+    )
 
-            st.dataframe(result_df, use_container_width=True)
-
-            st.markdown(
-                f"""
-                <span style="color:red; font-size:30px;">
-                    Predicted class: {pred_class}
-                </span>
-                """,
-                unsafe_allow_html=True
-            )
-
-       # Compute SHAP values
-        explainer = shap.TreeExplainer(model_xgb)
-        shap_values = explainer.shap_values(input_df)
-
-        # 5. Display SHAP force plot
-        st.subheader('SHAP Force Plot')
-        shap.initjs()
-        force_plot = shap.force_plot(
-            explainer.expected_value, 
-            shap_values[0], 
-            input_df.iloc[0, :], 
-            feature_names=feature_label, 
-            matplotlib=True, 
-            contribution_threshold=0.135
-        )
-        plt.savefig("shap_force_plot.png", bbox_inches='tight', dpi=120)
-        plt.close()
-
-        st.image("shap_force_plot.png")
-
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+except Exception as e:
+    st.error(f"An error occurred: {str(e)}")
