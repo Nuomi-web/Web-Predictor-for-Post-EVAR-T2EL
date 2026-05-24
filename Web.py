@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 st.title("Web Predictor")
-st.markdown("### XGBoost-based prediction model with SHAP explanation")
+st.markdown("### Web Predictor for Post-EVAR T2EL")
 
 # ===============================
 # 2. Feature names
@@ -219,7 +219,7 @@ if st.sidebar.button("Predict"):
                     border:1px solid #ffcccc;
                 ">
                     <span style="color:red; font-size:30px;">
-                        Predicted probability: {pred_value:.8f}
+                        Predicted Possibility of Post-EVAR T2EL；Predicted Value:  {pred_value:.8f}
                     </span>
                 </div>
                 """,
@@ -259,7 +259,8 @@ if st.sidebar.button("Predict"):
         fig = plot_shap_force(
             explainer=explainer,
             shap_values=shap_values,
-            input_df=input_df
+            input_df=input_df,
+            contribution_threshold=0.1
         )
 
         st.pyplot(fig)
@@ -267,3 +268,5 @@ if st.sidebar.button("Predict"):
 
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
+
+Predicted probability
