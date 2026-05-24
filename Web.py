@@ -252,19 +252,17 @@ if st.sidebar.button("Predict"):
             )
 
         # SHAP explanation
-        st.subheader("SHAP Force Plot")
-
-        shap_values = explainer.shap_values(input_df)
-
-        fig = plot_shap_force(
-            explainer=explainer,
-            shap_values=shap_values,
-            input_df=input_df,
+        st.subheader('SHAP Force Plot')
+        shap.initjs()
+        force_plot = shap.force_plot(
+            explainer.expected_value, 
+            shap_values[0], 
+            input_df.iloc[0, :], 
+            feature_names=feature_label, 
+            matplotlib=True, 
             contribution_threshold=0.1
         )
+        plt.savefig("shap_force_plot.png", bbox_inches='tight', dpi=120)
+        plt.close()
 
-        st.pyplot(fig)
-        plt.close(fig)
-
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+        st.image("shap_force_plot.png")
