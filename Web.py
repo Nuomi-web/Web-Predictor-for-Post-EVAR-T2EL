@@ -231,12 +231,14 @@ if st.sidebar.button("Predict"):
 
         st.markdown("## SHAP Force Plot")
 
-        shap_img = create_shap_force_plot(explainer, input_df)
+        st.markdown("## SHAP Force Plot")
 
+        shap_img = create_shap_force_plot(explainer, input_df)
+        
         st.image(
             shap_img,
-            use_container_width=True
-        )
+            use_column_width=True
+)
 
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
