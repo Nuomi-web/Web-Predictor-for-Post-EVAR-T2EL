@@ -58,7 +58,7 @@ default_values = {
     "PVAT_wavelet-LL_glcm_ClusterShade": 0,
     "AAA_square_gldm_DependenceNonUniformityNormalized": 0,
     "AAA_square_glcm_Imc1": 0,
-    "IMA patency": “Yes”,
+    "IMA patency": "Yes",
     "Maximum aneurysm diameter (mm)": 0
 }
 
