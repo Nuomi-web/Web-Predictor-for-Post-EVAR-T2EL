@@ -134,16 +134,6 @@ ima_map = {
 
 inputs["IMA patency"] = ima_map[inputs["IMA patency"]]
 
-# ===============================
-# 8. Convert to DataFrame and keep feature order
-# ===============================
-input_df = pd.DataFrame([inputs])
-input_df = input_df[feature_label]
-
-st.subheader("Input data for model")
-st.dataframe(input_df, use_container_width=True)
-
-# ===============================
 # 9. Prediction function
 # ===============================
 def predict_model(model, input_df):
