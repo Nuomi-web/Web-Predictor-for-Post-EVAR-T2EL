@@ -64,7 +64,6 @@ default_values = {
     "AAA_square_glcm_Imc1": 10.20636933,
     "IMA patency": "Yes",
     "Maximum aneurysm diameter (mm)": 48.06
-    "Maximum aneurysm diameter (mm)": ""
 }
 
 # ===============================
