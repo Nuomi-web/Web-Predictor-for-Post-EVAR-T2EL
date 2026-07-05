@@ -15,8 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("Web Predictor")
-st.markdown("### Web Predictor for Post-EVAR T2EL")
+st.title("Web Predictor for Post-EVAR T2EL")
 
 # ===============================
 # 2. Feature names
@@ -202,7 +201,7 @@ if st.sidebar.button("Predict"):
     try:
         prediction = predict_model(model_xgb, input_df)
 
-        st.subheader("Prediction Result")
+
 
         if np.asarray(prediction).ndim == 1:
             pred_value = float(np.asarray(prediction)[0])
