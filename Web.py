@@ -140,9 +140,6 @@ inputs["IMA patency"] = ima_map[inputs["IMA patency"]]
 input_df = pd.DataFrame([inputs])
 input_df = input_df[feature_label]
 
-st.subheader("Input data for model")
-st.dataframe(input_df, use_container_width=True)
-
 # ===============================
 # 9. Prediction function
 # ===============================
@@ -209,22 +206,9 @@ if st.sidebar.button("Predict"):
 
         if np.asarray(prediction).ndim == 1:
             pred_value = float(np.asarray(prediction)[0])
-
-            st.markdown(
-                f"""
-                <div style="
-                    background-color:#fff3f3;
-                    padding:20px;
-                    border-radius:10px;
-                    border:1px solid #ffcccc;
-                ">
-                    <span style="color:red; font-size:30px;">
-                        Predicted Possibility of Post-EVAR T2EL；Predicted Value:  {pred_value:.8f}
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+        
+            st.subheader("Predicted Possibility of Post-EVAR T2EL")
+            st.markdown(f"**Predicted Value: {pred_value:.8f}**")
 
             if pred_value >= 0.5:
                 st.warning("Predicted class: Positive")
