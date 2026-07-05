@@ -1,4 +1,4 @@
-import streamlit as st
+mport streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
@@ -134,6 +134,15 @@ ima_map = {
 
 inputs["IMA patency"] = ima_map[inputs["IMA patency"]]
 
+# ===============================
+# 8. Convert to DataFrame and keep feature order
+# ===============================
+input_df = pd.DataFrame([inputs])
+input_df = input_df[feature_label]
+
+
+
+# ===============================
 # 9. Prediction function
 # ===============================
 def predict_model(model, input_df):
