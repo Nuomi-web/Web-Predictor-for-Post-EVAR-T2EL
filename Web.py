@@ -102,7 +102,7 @@ for feature in feature_label:
         format="%.9f"
     )
 
-st.sidebar.markdown("### Clinical / Morphological Features")
+st.sidebar.markdown("### Clinical/Radiological Features")
 
 # IMA patency: No=0, Yes=1
 ima_options = ["No", "Yes"]
