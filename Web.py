@@ -1,4 +1,4 @@
-import streamlit as st
+mport streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
@@ -64,146 +64,209 @@ default_values = {
 }
 
 # ===============================
-# 4. Streamlit page
+# 4. Load model
 # ===============================
-st.title('Web Predictor for Occult LNM in Patients with HNSCC')
-st.sidebar.header('Input Features')
+@st.cache_resource
+def load_model():
+    return joblib.load("XGBoost.pkl")
+
+model_xgb = load_model()
 
 # ===============================
-# 5. Input features
+# 5. Load SHAP explainer
 # ===============================
+@st.cache_resource
+def load_explainer(_model):
+    return shap.TreeExplainer(_model)
+
+explainer = load_explainer(model_xgb)
+
+# ===============================
+# 6. Sidebar input
+# ===============================
+st.sidebar.header("Input Features")
+
 inputs = {}
 
-continuous_features = [
-    'IC_DL_57',
-    'VMI_original_glszm_SmallAreaHighGrayLevelEmphasis',
-    'IC_wavelet-LLH_glszm_ZoneEntropy',
-    'Zeff_DL_91',
-    'VMI_DL_45',
-    'IC_DL_121',
-    'Zeff_wavelet-LLH_gldm_LargeDependenceLowGrayLevelEmphasis',
-    'VMI_DL_139',
-    'Zeff_DL_137',
-    'IC_wavelet-LHL_firstorder_Skewness',
-    'Zeff_wavelet-LHH_glcm_Idn',
-    'VMI_wavelet-LLH_glrlm_GrayLevelNonUniformity',
-    'VMI_wavelet-HHH_glcm_Correlation',
-    'PEI_wavelet-LLH_glszm_SmallAreaEmphasis',
-    'IC_wavelet-LLL_glszm_SizeZoneNonUniformity',
-    'PEI_DL_243'
-]
+st.sidebar.markdown("### Radiomics / Deep Features")
 
-# Continuous variables
-for feature in continuous_features:
+for feature in feature_label:
+    if feature in ["IMA patency", "Maximum aneurysm diameter (mm)"]:
+        continue
+
     inputs[feature] = st.sidebar.number_input(
         label=feature,
-        min_value=-100.0,
-        max_value=100.0,
+        min_value=-1000.0,
+        max_value=1000.0,
         value=float(default_values[feature]),
         step=0.01,
-        format="%.6f"
+        format="%.9f"
     )
 
-# ===============================
-# Histological grade
-# 0: Well
-# 1: Moderate
-# 2: Poor
-# ===============================
-histological_options = ['Well', 'Moderate', 'Poor']
+st.sidebar.markdown("### Clinical / Morphological Features")
 
-histological_grade = st.sidebar.selectbox(
-    'Histological grade',
-    options=histological_options,
-    index=int(default_values['Histological grade'])
+# IMA patency: No=0, Yes=1
+ima_options = ["No", "Yes"]
+
+inputs["IMA patency"] = st.sidebar.radio(
+    "IMA patency",
+    options=ima_options,
+    index=ima_options.index(default_values["IMA patency"]),
+    help="No = 0, Yes = 1"
 )
 
-histological_map = {
-    'Well': 0,
-    'Moderate': 1,
-    'Poor': 2
-}
-
-inputs['Histological grade'] = histological_map[histological_grade]
-
-# ===============================
-# Clinical T stage
-# 0: T1-2
-# 1: T3-4
-# ===============================
-clinical_t_options = ['T1-2', 'T3-4']
-
-clinical_t_stage = st.sidebar.selectbox(
-    'Clinical T stage',
-    options=clinical_t_options,
-    index=int(default_values['Clinical T stage'])
+inputs["Maximum aneurysm diameter (mm)"] = st.sidebar.number_input(
+    "Maximum aneurysm diameter (mm)",
+    min_value=0.0,
+    max_value=200.0,
+    value=float(default_values["Maximum aneurysm diameter (mm)"]),
+    step=0.01,
+    format="%.2f"
 )
 
-clinical_t_map = {
-    'T1-2': 0,
-    'T3-4': 1
+# ===============================
+# 7. Encode categorical variable
+# ===============================
+ima_map = {
+    "No": 0,
+    "Yes": 1
 }
 
-inputs['Clinical T stage'] = clinical_t_map[clinical_t_stage]
+inputs["IMA patency"] = ima_map[inputs["IMA patency"]]
 
-# Convert input values into DataFrame
+# ===============================
+# 8. Convert to DataFrame and keep feature order
+# ===============================
 input_df = pd.DataFrame([inputs])
-
-# Ensure the order is exactly the same as training
 input_df = input_df[feature_label]
 
-# 6. Prediction
+st.subheader("Input data for model")
+st.dataframe(input_df, use_container_width=True)
+
 # ===============================
-if st.sidebar.button('Predict'):
+# 9. Prediction function
+# ===============================
+def predict_model(model, input_df):
+    """
+    Compatible with:
+    - xgboost.Booster
+    - sklearn API XGBClassifier/XGBRegressor
+    """
+
+    if isinstance(model, xgb.Booster):
+        dmatrix = xgb.DMatrix(input_df)
+        pred = model.predict(dmatrix)
+    else:
+        if hasattr(model, "predict_proba"):
+            pred = model.predict_proba(input_df)
+
+            if pred.ndim == 2 and pred.shape[1] == 2:
+                pred = pred[:, 1]
+        else:
+            pred = model.predict(input_df)
+
+    return pred
+
+# ===============================
+# 10. SHAP plotting function
+# ===============================
+def plot_shap_force(explainer, shap_values, input_df):
+    expected_value = explainer.expected_value
+
+    if isinstance(expected_value, list):
+        expected_value = expected_value[-1]
+
+    if isinstance(expected_value, np.ndarray):
+        if expected_value.ndim > 0:
+            expected_value = expected_value[-1]
+
+    if isinstance(shap_values, list):
+        shap_value_single = shap_values[-1][0]
+    else:
+        shap_value_single = shap_values[0]
+
+    shap.force_plot(
+        expected_value,
+        shap_value_single,
+        input_df.iloc[0, :],
+        feature_names=feature_label,
+        matplotlib=True,
+        show=False,
+        contribution_threshold=0.05
+    )
+
+    fig = plt.gcf()
+    return fig
+
+# ===============================
+# 11. Prediction and SHAP
+# ===============================
+if st.sidebar.button("Predict"):
     try:
+        prediction = predict_model(model_xgb, input_df)
 
-        input_data = xgb.DMatrix(input_df.values)
+        st.subheader("Prediction Result")
 
-        prediction = model_xgb.predict(
-            input_data,
-            validate_features=False
-        )[0]
+        if np.asarray(prediction).ndim == 1:
+            pred_value = float(np.asarray(prediction)[0])
 
-        st.subheader('Predicted probability of occult LNM')
+            st.markdown(
+                f"""
+                <div style="
+                    background-color:#fff3f3;
+                    padding:20px;
+                    border-radius:10px;
+                    border:1px solid #ffcccc;
+                ">
+                    <span style="color:red; font-size:30px;">
+                        Predicted Possibility of Post-EVAR T2EL；Predicted Value:  {pred_value:.8f}
+                    </span>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-        st.markdown(
-            f"""
-            <p style="font-size:18px; font-weight:bold;">
-                Predicted probability:
-                <span style="color:red;">{prediction:.6f}</span>
-            </p>
-            """,
-            unsafe_allow_html=True
-        )
+            if pred_value >= 0.5:
+                st.warning("Predicted class: Positive")
+            else:
+                st.success("Predicted class: Negative")
 
-        # ===============================
-        # 7. SHAP explanation
-        # ===============================
-        st.subheader('SHAP Force Plot')
+        else:
+            pred_array = np.asarray(prediction)[0]
+            pred_class = int(np.argmax(pred_array))
 
+            result_df = pd.DataFrame({
+                "Class": [f"Class {i}" for i in range(len(pred_array))],
+                "Probability": pred_array
+            })
+
+            st.dataframe(result_df, use_container_width=True)
+
+            st.markdown(
+                f"""
+                <span style="color:red; font-size:30px;">
+                    Predicted class: {pred_class}
+                </span>
+                """,
+                unsafe_allow_html=True
+            )
+
+       # Compute SHAP values
         explainer = shap.TreeExplainer(model_xgb)
+        shap_values = explainer.shap_values(input_df)
 
-        # Use values only to avoid feature name mismatch in SHAP
-        shap_values = explainer.shap_values(input_df.values)
-
-        plt.figure()
-
-        shap.force_plot(
-            explainer.expected_value,
-            shap_values[0],
-            input_df.iloc[0, :],
-            feature_names=feature_label,
-            matplotlib=True,
-            contribution_threshold=0.11,
-            show=False
+        # 5. Display SHAP force plot
+        st.subheader('SHAP Force Plot')
+        shap.initjs()
+        force_plot = shap.force_plot(
+            explainer.expected_value, 
+            shap_values[0], 
+            input_df.iloc[0, :], 
+            feature_names=feature_label, 
+            matplotlib=True, 
+            contribution_threshold=0.135
         )
-
-        plt.savefig(
-            "shap_force_plot.png",
-            bbox_inches='tight',
-            dpi=300
-        )
-
+        plt.savefig("shap_force_plot.png", bbox_inches='tight', dpi=120)
         plt.close()
 
         st.image("shap_force_plot.png")
