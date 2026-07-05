@@ -44,7 +44,7 @@ default_values = {
 }
 
 # ===============================
-# 4. Default sample values
+# 3. Default sample values
 # IMA patency: No = 0, Yes = 1
 # ===============================
 default_values = {
@@ -65,6 +65,7 @@ default_values = {
     "IMA patency": "Yes",
     "Maximum aneurysm diameter (mm)": 48.06
 }
+
 
 # ===============================
 # 5. Load model
