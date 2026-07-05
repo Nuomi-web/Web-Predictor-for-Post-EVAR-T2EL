@@ -204,7 +204,7 @@ if st.sidebar.button("Predict"):
     try:
         prediction = predict_model(model_xgb, input_df)
 
-
+        st.subheader("Prediction Result")
 
         if np.asarray(prediction).ndim == 1:
             pred_value = float(np.asarray(prediction)[0])
@@ -225,6 +225,10 @@ if st.sidebar.button("Predict"):
                 unsafe_allow_html=True
             )
 
+            if pred_value >= 0.5:
+                st.warning("Predicted class: Positive")
+            else:
+                st.success("Predicted class: Negative")
 
         else:
             pred_array = np.asarray(prediction)[0]
@@ -268,3 +272,5 @@ if st.sidebar.button("Predict"):
 
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
+        
+
