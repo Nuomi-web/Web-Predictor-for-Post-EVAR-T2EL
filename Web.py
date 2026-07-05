@@ -209,11 +209,7 @@ if st.sidebar.button("Predict"):
             st.subheader("Predicted Possibility of Post-EVAR T2EL")
             st.markdown(f"**Predicted Value: {pred_value:.8f}**")
 
-            if pred_value >= 0.5:
-                st.warning("Predicted class: Positive")
-            else:
-                st.success("Predicted class: Negative")
-
+         
         else:
             pred_array = np.asarray(prediction)[0]
             pred_class = int(np.argmax(pred_array))
