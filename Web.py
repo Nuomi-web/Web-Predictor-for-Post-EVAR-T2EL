@@ -44,22 +44,22 @@ feature_label = [
 # IMA patency: No = 0, Yes = 1
 # ===============================
 default_values = {
-    "DeepFeature7": -0.194331593,
-    "DeepFeature474": 0.567902798,
-    "DeepFeature105": 0.837165944,
-    "DeepFeature375": -0.640949675,
-    "DeepFeature48": -0.321764867,
-    "DeepFeature318": 0.6806,
-    "DeepFeature332": 0.76790509,
-    "AAA_wavelet-HL_firstorder_Skewness": -1.511827266,
-    "DeepFeature316": -1.518833969,
-    "DeepFeature73": -0.606873453,
-    "PVAT_wavelet-HL_firstorder_Maximum": 1.813605379,
-    "PVAT_wavelet-LL_glcm_ClusterShade": 0.064459839,
-    "AAA_square_gldm_DependenceNonUniformityNormalized": -0.771297444,
-    "AAA_square_glcm_Imc1": 10.20636933,
-    "IMA patency": "Yes",
-    "Maximum aneurysm diameter (mm)": 48.06
+    "DeepFeature7": 0,
+    "DeepFeature474": 0,
+    "DeepFeature105": 0,
+    "DeepFeature375": 0,
+    "DeepFeature48": 0,
+    "DeepFeature318": 0,
+    "DeepFeature332": 0,
+    "AAA_wavelet-HL_firstorder_Skewness": 0,
+    "DeepFeature316": 0,
+    "DeepFeature73": 0,
+    "PVAT_wavelet-HL_firstorder_Maximum": 0,
+    "PVAT_wavelet-LL_glcm_ClusterShade": 0,
+    "AAA_square_gldm_DependenceNonUniformityNormalized": 0,
+    "AAA_square_glcm_Imc1": 0,
+    "IMA patency": “Yes”,
+    "Maximum aneurysm diameter (mm)": 0
 }
 
 # ===============================
