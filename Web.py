@@ -5,7 +5,7 @@ import numpy as np
 import shap
 import xgboost as xgb
 import matplotlib.pyplot as plt
-Prediction Result
+
 # ===============================
 # 1. Page configuration
 # ===============================
@@ -140,7 +140,8 @@ inputs["IMA patency"] = ima_map[inputs["IMA patency"]]
 input_df = pd.DataFrame([inputs])
 input_df = input_df[feature_label]
 
-
+st.subheader("Input data for model")
+st.dataframe(input_df, use_container_width=True)
 
 # ===============================
 # 9. Prediction function
@@ -273,4 +274,3 @@ if st.sidebar.button("Predict"):
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
         
-
