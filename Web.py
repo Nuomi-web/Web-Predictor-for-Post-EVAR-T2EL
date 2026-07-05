@@ -48,22 +48,22 @@ default_values = {
 # IMA patency: No = 0, Yes = 1
 # ===============================
 default_values = {
-    "DeepFeature7": 0,
-    "DeepFeature474": 0,
-    "DeepFeature105": 0,
-    "DeepFeature375": 0,
-    "DeepFeature48": 0,
-    "DeepFeature318": 0,
-    "DeepFeature332": 0,
-    "AAA_wavelet-HL_firstorder_Skewness": 0,
-    "DeepFeature316": 0,
-    "DeepFeature73": 0,
-    "PVAT_wavelet-HL_firstorder_Maximum": 0,
-    "PVAT_wavelet-LL_glcm_ClusterShade": 0,
-    "AAA_square_gldm_DependenceNonUniformityNormalized": 0,
-    "AAA_square_glcm_Imc1": 0,
-    "IMA patency": "Yes",
-    "Maximum aneurysm diameter (mm)": 0
+    "DeepFeature7": "",
+    "DeepFeature474": "",
+    "DeepFeature105": "",
+    "DeepFeature375": "",
+    "DeepFeature48": "",
+    "DeepFeature318": "",
+    "DeepFeature332": "",
+    "AAA_wavelet-HL_firstorder_Skewness": "",
+    "DeepFeature316": "",
+    "DeepFeature73": "",
+    "PVAT_wavelet-HL_firstorder_Maximum": "",
+    "PVAT_wavelet-LL_glcm_ClusterShade": "",
+    "AAA_square_gldm_DependenceNonUniformityNormalized": "",
+    "AAA_square_glcm_Imc1": "",
+    "IMA patency": "",
+    "Maximum aneurysm diameter (mm)": ""
 }
 
 # ===============================
