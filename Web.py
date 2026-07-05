@@ -24,24 +24,24 @@ st.title("Web Predictor for Post-EVAR T2EL")
 # ===============================
 # 3. Feature names
 # ===============================
-feature_label = [
-    "DeepFeature7",
-    "DeepFeature474",
-    "DeepFeature105",
-    "DeepFeature375",
-    "DeepFeature48",
-    "DeepFeature318",
-    "DeepFeature332",
-    "AAA_wavelet-HL_firstorder_Skewness",
-    "DeepFeature316",
-    "DeepFeature73",
-    "PVAT_wavelet-HL_firstorder_Maximum",
-    "PVAT_wavelet-LL_glcm_ClusterShade",
-    "AAA_square_gldm_DependenceNonUniformityNormalized",
-    "AAA_square_glcm_Imc1",
-    "IMA patency",
-    "Maximum aneurysm diameter (mm)"
-]
+default_values = {
+    "DeepFeature7": None,
+    "DeepFeature474": None,
+    "DeepFeature105": None,
+    "DeepFeature375": None,
+    "DeepFeature48": None,
+    "DeepFeature318": None,
+    "DeepFeature332": None,
+    "AAA_wavelet-HL_firstorder_Skewness": None,
+    "DeepFeature316": None,
+    "DeepFeature73": None,
+    "PVAT_wavelet-HL_firstorder_Maximum": None,
+    "PVAT_wavelet-LL_glcm_ClusterShade": None,
+    "AAA_square_gldm_DependenceNonUniformityNormalized": None,
+    "AAA_square_glcm_Imc1": None,
+    "IMA patency": None,
+    "Maximum aneurysm diameter (mm)": None
+}
 
 # ===============================
 # 4. Default sample values
